@@ -4,6 +4,8 @@ from urlparse import urlsplit # Used to parse urls
 from requests.exceptions import ConnectionError, InvalidURL, MissingSchema # Common exceptions that might be thrown during the recursing process
 import hashlib # Used to compute hexdigests of files so as not to download duplicates
 import os # Used to remove duplicate files
+import pandas as pd # Create a dataframe of the duplicate records
+import matplotlib.pyplot as plt # Make a cool plot
 
 #The domain we care about
 domain = 'ece.udel.edu'
@@ -92,7 +94,7 @@ def recurse(url):
 	visited_sites.add(url)
 	#The amount of urls visited including the current one
 	sites_visited = len(visited_sites)
-	print("Current url: {}, Sites visited: {}".format(url, sites_visited))
+	print("\rCurrent url: {}, Sites visited: {}".format(url, sites_visited))
 	#Try to save the page
 	save_page(page)
 
@@ -115,16 +117,36 @@ def recurse(url):
 	else:
 		return
 
+def dict_to_df(this_dict):
+	data_dict = {}
+	data_dict["hash"] = list()
+	data_dict["file_name"] = []
+	data_dict["duplicates"] = []
+
+	for key, val in this_dict.iteritems():
+		data_dict["hash"].append(key)
+		data_dict["file_name"].append(val[0])
+		data_dict["duplicates"].append(val[1])
+	return pd.DataFrame(data_dict, columns=data_dict.keys())
+
 if __name__ == "__main__":
 	#Call the method... thats what this script should do
 	recurse(first_site)
+
+	date_frame = dict_to_df(saved_site_dict)
+	date_frame.set_index('file_name', inplace=True, verify_integrity=True)
+
+	date_frame.hist(column='duplicates')
+	plt.show()
+	date_frame.to_csv('result.csv')
 	#Print top 10 duplicated sites
 	decompose_dups_to_list = []
 	for key, val in saved_site_dict.iteritems():
 		#Values club only
 		decompose_dups_to_list.append(val)
+
 	#Reverse sort it so I can see the most duplicated first
 	decompose_dups_to_list.sort(reverse=True, key=lambda tup: tup[1])
 
-print("Top 10 duplicated sites")
-print(decompose_dups_to_list[:10])
+# print("Top 10 duplicated sites")
+# print(decompose_dups_to_list[:10])
